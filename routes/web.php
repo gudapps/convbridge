@@ -10,4 +10,6 @@ Route::get('/', function () {
 
 
 // Bigcommerce App related routes
-Route::get('auth/callback', [AuthController::class, 'callback']);
+Route::prefix('bigc-app')->group(function () {
+    Route::get('auth/callback', [AuthController::class, 'callback']);
+});
