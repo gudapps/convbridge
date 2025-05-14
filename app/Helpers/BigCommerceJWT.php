@@ -16,8 +16,8 @@ class BigCommerceJWT
 
             // Store decoded values in session
             session([
-                'store_hash' => $decoded->sub->store_hash ?? null,
-                'user_id' => $decoded->sub->user_id ?? null,
+                'store_hash' => $decoded->sub ?? null,
+                'user_id' => $decoded->user->id ?? null,
             ]);
 
             return $decoded;
