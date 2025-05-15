@@ -12,4 +12,28 @@ class Store extends Model
         'scope',
         'context',
     ];
+
+    // One store has many conversion settings (Facebook, Google, etc.)
+    public function conversionSettings()
+    {
+        return $this->hasMany(ConversionSetting::class);
+    }
+
+    // One store has many tracked orders
+    public function trackedOrders()
+    {
+        return $this->hasMany(TrackedOrder::class);
+    }
+
+    // One store has many tracked customers
+    public function trackedCustomers()
+    {
+        return $this->hasMany(TrackedCustomer::class);
+    }
+
+    // One store has many conversion logs
+    public function conversionLogs()
+    {
+        return $this->hasMany(ConversionLog::class);
+    }
 }
