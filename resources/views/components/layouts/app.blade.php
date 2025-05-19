@@ -11,7 +11,7 @@
 </head>
 <body>
     <div>
-        <img src="{{ asset('images/ConvBridge_Logo_100x88_wo_bg.png') }}" alt="Conversion Bridge Logo" class="h-32">
+        <img src="{{ asset('images/ConvBridge_Logo_100x88_wo_bg.png') }}" alt="Conversion Bridge Logo" class="h-16">
     </div>
     {{ $slot }}
 </body>
