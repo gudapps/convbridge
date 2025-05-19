@@ -56,7 +56,7 @@ class FetchAndStoreOrderJob implements ShouldQueue
                 'store_id' => $store->id
             ],
             [
-                'status' => $orderData['status'],
+                'status' => config('bigcommerce.order_statuses')[$orderData['status_id']] ?? 'Unknown',
                 'status_id' => $orderData['status_id'],
                 'order_data' => $orderData
             ]
