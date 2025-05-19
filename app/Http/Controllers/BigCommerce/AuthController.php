@@ -53,7 +53,8 @@ class AuthController extends Controller
         );
 
         // Step 5: Register the webhook after storing the store data
-        $isWebhookRegistered = $this->webhookRegistrar->registerOrderCreated($storeHash, $data['access_token']);
+        $this->webhookRegistrar->registerOrderCreated($storeHash, $data['access_token']);
+        $this->webhookRegistrar->registerOrderStatusUpdatedWebhook($storeHash, $data['access_token']);
 
         // Step 6: Redirect to dashboard or another route
         return redirect('bigc-app/dashboard'); // or your Livewire dashboard

@@ -25,12 +25,40 @@ class WebhookRegistrar
 
         // Check if the registration was successful
         if ($response->successful()) {
-            Log::info("Webhook successfully registered for store: {$storeHash}");
+            Log::info("order.created webhook successfully registered for store: {$storeHash}");
             return true;
         }
 
         // Log any errors if the webhook registration fails
         Log::error("Failed to register order.created webhook: " . $response->body());
+        return false;
+    }
+
+    public function registerOrderStatusUpdatedWebhook(string $storeHash, string $accessToken): bool
+    {
+        // BigCommerce API URL for registering webhooks
+        $endpoint = "https://api.bigcommerce.com/stores/{$storeHash}/v3/hooks";
+
+        // Send a POST request to register the order.created webhook
+        $response = Http::withHeaders([
+            'X-Auth-Token' => $accessToken,
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->post($endpoint, [
+            'scope' => 'store/order/statusUpdated',
+            'destination' => route('bigc.webhook.order.statusUpdated'),  // URL for the webhook
+            'is_active' => true, // Make it active immediately
+            'events_history_enabled' => true,
+        ]);
+
+        // Check if the registration was successful
+        if ($response->successful()) {
+            Log::info("order.statusUpdated webhook successfully registered for store: {$storeHash}");
+            return true;
+        }
+
+        // Log any errors if the webhook registration fails
+        Log::error("Failed to register order.statusUpdated webhook: " . $response->body());
         return false;
     }
 }
