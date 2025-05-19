@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\Store;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Support\Facades\Session;
@@ -14,10 +15,17 @@ class BigCommerceJWT
         try {
             $decoded = JWT::decode($jwt, new Key(env('BC_CLIENT_SECRET'), 'HS256'));
 
+            $storeHash = str_replace('stores/', '', $decoded->sub) ?? null;
+            $userId = $decoded->user->id ?? null;
+
+            // Lookup store_id from the DB using store_hash
+            $store = Store::where('store_hash', $storeHash)->first();
+
             // Store decoded values in session
             session([
-                'store_hash' => $decoded->sub ?? null,
-                'user_id' => $decoded->user->id ?? null,
+                'store_hash' => $storeHash,
+                'user_id' => $userId ?? null,
+                'store_id' => $store?->id, // Null-safe in case store not found
             ]);
 
             return $decoded;

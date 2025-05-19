@@ -3,7 +3,10 @@
 use App\Http\Controllers\BigCommerce\AuthController;
 use App\Http\Controllers\BigCommerce\LoadController;
 use App\Http\Controllers\BigCommerce\WebhookController;
+use App\Livewire\BigCApp\BingSettings;
 use App\Livewire\BigCApp\Dashboard;
+use App\Livewire\BigCApp\FacebookSettings;
+use App\Livewire\BigCApp\GoogleSettings;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +31,11 @@ Route::prefix('bigc-app')->group(function () {
     // Routes that require session validation
     Route::middleware(['bigc.auth', 'allowiframe'])->group(function () {
         Route::get('dashboard', Dashboard::class);
+
+        // Routes for Conversion Settings
+        Route::get('/settings/facebook', FacebookSettings::class)->name('settings.facebook');
+        Route::get('/settings/google', GoogleSettings::class)->name('settings.google');
+        Route::get('/settings/bing', BingSettings::class)->name('settings.bing');
 
     });
 });
