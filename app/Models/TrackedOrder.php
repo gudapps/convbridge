@@ -9,6 +9,8 @@ class TrackedOrder extends Model
     protected $fillable = [
         'store_id',
         'order_id',
+        'status',
+        'status_id',
         'order_data',
     ];
 

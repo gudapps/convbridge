@@ -51,8 +51,16 @@ class FetchAndStoreOrderJob implements ShouldQueue
 
         // Save to tracked_orders
         $trackedOrder = TrackedOrder::updateOrCreate(
-            ['order_id' => $this->orderId],
-            ['store_id' => $store->id, 'order_data' => $orderData]
+            [
+                'order_id' => $this->orderId,
+                'store_id' => $store->id
+            ],
+            [
+                'status' => $orderData['status'],
+                'status_id' => $orderData['status_id'],
+                'order_data' => $orderData
+            ]
+
         );
 
         // Save customer
