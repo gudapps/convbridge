@@ -11,6 +11,9 @@ class Store extends Model
         'access_token',
         'scope',
         'context',
+        'store_url',
+        'store_name',
+        'store_data',
     ];
 
     // One store has many conversion settings (Facebook, Google, etc.)
@@ -36,4 +39,8 @@ class Store extends Model
     {
         return $this->hasMany(ConversionLog::class);
     }
+
+    protected $casts = [
+        'store_data' => 'array',
+    ];
 }

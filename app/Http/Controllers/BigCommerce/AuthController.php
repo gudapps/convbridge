@@ -41,22 +41,39 @@ class AuthController extends Controller
         // Step 3: Extract store_hash and access_token from the response
         $data = $response->json();
         $storeHash = str_replace('stores/', '', $data['context']);
+        $accessToken = $data['access_token'];
 
-        // Step 4: Save the store's information in your database
+        // Step 4: Fetch store URL from BigCommerce Store API
+        $storeResponse = Http::withHeaders([
+            'X-Auth-Token' => $accessToken,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ])->get("https://api.bigcommerce.com/stores/$storeHash/v2/store");
+
+        if (!$storeResponse->successful()) {
+            Log::info("Failed to fetch store info: {$storeHash}");
+            return response()->json(['error' => 'Failed to fetch store info'], 400);
+        }
+        $storeData = $storeResponse->json();
+
+        // Step 5: Save the store's information in your database
         Store::updateOrCreate(
             ['store_hash' => $storeHash],
             [
-                'access_token' => $data['access_token'],
+                'access_token' => $accessToken,
                 'scope'        => $data['scope'],
                 'context'      => $data['context'],
+                'store_url'    => $storeData['secure_url'],
+                'store_name'   => $storeData['name'],
+                'store_data'   => $storeData,
             ]
         );
 
-        // Step 5: Register the webhook after storing the store data
+        // Step 6: Register the webhook after storing the store data
         $this->webhookRegistrar->registerOrderCreated($storeHash, $data['access_token']);
         $this->webhookRegistrar->registerOrderStatusUpdatedWebhook($storeHash, $data['access_token']);
 
-        // Step 6: Redirect to dashboard or another route
+        // Step 7: Redirect to dashboard or another route
         return redirect('bigc-app/dashboard'); // or your Livewire dashboard
     }
 }
