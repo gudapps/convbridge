@@ -2,10 +2,15 @@
 
 namespace App\Jobs\BigCommerce;
 
+use App\Jobs\SendBingConversionJob;
+use App\Jobs\SendFacebookConversionJob;
+use App\Jobs\SendGoogleConversionJob;
+use App\Models\ConversionSetting;
 use App\Models\Store;
 use App\Models\TrackedCustomer;
 use App\Models\TrackedOrder;
 use App\Models\TrackedOrderItem;
+use App\Services\BigCApp\OrderStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
@@ -109,6 +114,25 @@ class FetchAndStoreOrderJob implements ShouldQueue
             ]);
         }
 
+        // If not processable, then do nothing
+        if(! OrderStatus::isProcessable($orderData['status_id'])){
+            return;
+        }
+
+        // Dispatch platform-specific jobs if conversion settings exist
+        $settings = ConversionSetting::where('store_id', $store->id)->get()->keyBy('platform');
+
+        if ($settings->has('facebook')) {
+            SendFacebookConversionJob::dispatch($trackedOrder->id);
+        }
+
+        if ($settings->has('google')) {
+            SendGoogleConversionJob::dispatch($trackedOrder->id);
+        }
+
+        if ($settings->has('bing')) {
+            SendBingConversionJob::dispatch($trackedOrder->id);
+        }
         return;
     }
 }
