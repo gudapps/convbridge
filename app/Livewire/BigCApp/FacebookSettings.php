@@ -16,7 +16,6 @@ class FacebookSettings extends Component
 
     public $scriptStatus = [
         'main' => false,
-        'pageview' => false,
         'viewcontent' => false,
         'addtocart' => false,
         'purchase' => false,
@@ -32,7 +31,22 @@ class FacebookSettings extends Component
 
         $this->scriptStatus['main'] = StoreScript::where('store_id', $setting->store_id)
                                         ->where('provider', 'Facebook')
-                                        ->where('event_type', 'main_pixel')
+                                        ->where('event_type', 'main')
+                                        ->exists();
+
+        $this->scriptStatus['viewcontent'] = StoreScript::where('store_id', $setting->store_id)
+                                        ->where('provider', 'Facebook')
+                                        ->where('event_type', 'viewContent')
+                                        ->exists();
+
+        $this->scriptStatus['addtocart'] = StoreScript::where('store_id', $setting->store_id)
+                                        ->where('provider', 'Facebook')
+                                        ->where('event_type', 'addToCart')
+                                        ->exists();
+
+        $this->scriptStatus['purchase'] = StoreScript::where('store_id', $setting->store_id)
+                                        ->where('provider', 'Facebook')
+                                        ->where('event_type', 'purchase')
                                         ->exists();
     }
 
@@ -54,41 +68,101 @@ class FacebookSettings extends Component
         return view('livewire.big-c-app.facebook-settings');
     }
 
-    public function injectMainPixel(){
-
+    private function injectPixel($pixelType){
         if (empty($this->pixel_id)) {
-            $this->dispatch('notify', ['type' => 'error', 'message' => 'Pixel ID is required']); //TODO: display this on FE
+            session()->flash('mainPixelFail', 'Pixel ID is required.');
             return;
         }
 
         $store = Store::where('id',session('store_id'))->first();
 
         if (!$store) {
-            $this->dispatch('notify', ['type' => 'error', 'message' => 'Store not found']); //TODO: display this on FE
+            session()->flash('mainPixelFail', 'Store not found.');
             return;
         }
 
-        $scriptContent = "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init', '{$this->pixel_id}');fbq('track', 'PageView');</script>";
-        $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts";
+        switch($pixelType){
+            case "main":
+                $scriptContent = "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init', '{$this->pixel_id}');fbq('track', 'PageView');</script>";
+                $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts";
+                $response = Http::withHeaders([
+                    'X-Auth-Token' => $store->access_token,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])->post($url, [
+                        'name' => 'Facebook Pixel Main Script',
+                        'description' => 'Inject Facebook Pixel main tracking script',
+                        'html' => $scriptContent,
+                        'auto_uninstall' => true,
+                        'load_method' => 'default',
+                        'location' => 'head',
+                        'visibility' => 'storefront',
+                        "kind"=> "script_tag",
+                        "consent_category"=> "analytics"
+                    ]);
+                break;
 
-        $response = Http::withHeaders([
-            'X-Auth-Token' => $store->access_token,
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-        ])->post($url, [
-                'name' => 'Facebook Pixel Main Script',
-                'description' => 'Inject Facebook Pixel main tracking script',
-                'html' => $scriptContent,
-                'auto_uninstall' => true,
-                'load_method' => 'default',
-                'location' => 'head',
-                'visibility' => 'storefront',
-                "kind"=> "script_tag",
-                "consent_category"=> "analytics"
-            ]);
+            case "viewContent":
+                $scriptContent = "<script>document.addEventListener('DOMContentLoaded',function(){if(window.BCData&&window.BCData.product_attributes){var bcProduct=BCData.product_attributes;if(typeof fbq==='function'){fbq('track','ViewContent',{content_ids:[bcProduct.sku||bcProduct.id],content_type:'product',value:bcProduct.price.sale_price_without_tax.value||bcProduct.price.without_tax.value,currency:bcProduct.price.sale_price_without_tax.currency||bcProduct.price.without_tax.currency,content_name:document.title||''});}}});</script>";
+                $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts";
+                $response = Http::withHeaders([
+                    'X-Auth-Token' => $store->access_token,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])->post($url, [
+                        'name' => 'FB Pixel - ViewContent',
+                        'description' => 'Triggers FB ViewContent event on product detail pages',
+                        'html' => $scriptContent,
+                        'auto_uninstall' => true,
+                        'load_method' => 'default',
+                        'location' => 'footer',
+                        'visibility' => 'storefront',
+                        "kind"=> "script_tag",
+                        "consent_category"=> "analytics"
+                    ]);
+                break;
 
+            case "addToCart":
+                $scriptContent = "<script>document.addEventListener('DOMContentLoaded',function(){var btn=document.getElementById('form-action-addToCart');if(btn){btn.addEventListener('click',function(){var bcProduct=BCData.product_attributes;var qty=parseInt(document.querySelector('input[name=\\\"qty[]\\\"]')?.value||'1');fbq('track','AddToCart',{content_ids:[bcProduct.sku||bcProduct.id],content_type:'product',value:bcProduct.price.sale_price_without_tax.value||bcProduct.price.without_tax.value,currency:bcProduct.price.sale_price_without_tax.currency||bcProduct.price.without_tax.currency,content_name:document.title||'',quantity:qty});});}});</script>";
+                $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts";
+                $response = Http::withHeaders([
+                    'X-Auth-Token' => $store->access_token,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])->post($url, [
+                        'name' => 'FB Pixel - Add to cart',
+                        'description' => 'Triggers FB Add to cart event on product detail pages',
+                        'html' => $scriptContent,
+                        'auto_uninstall' => true,
+                        'load_method' => 'default',
+                        'location' => 'footer',
+                        'visibility' => 'storefront',
+                        "kind"=> "script_tag",
+                        "consent_category"=> "analytics"
+                    ]);
+                break;
 
-        Log::info($response);
+            case "purchase":
+                $scriptContent = "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init', '{$this->pixel_id}');fbq('track', 'PageView');setTimeout(function(){var orderId=document.querySelector('[data-test=\"order-confirmation-order-number-text\"] strong')?.innerText;fbq('track', 'Purchase',{eventID:'order_'+orderId});},2000)</script>";
+                $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts";
+                $response = Http::withHeaders([
+                    'X-Auth-Token' => $store->access_token,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])->post($url, [
+                        'name' => 'FB Pixel - Purchase',
+                        'description' => 'Triggers FB purchase event on product detail pages',
+                        'html' => $scriptContent,
+                        'auto_uninstall' => true,
+                        'load_method' => 'default',
+                        'location' => 'footer',
+                        'visibility' => 'order_confirmation',
+                        "kind"=> "script_tag",
+                        "consent_category"=> "analytics"
+                    ]);
+                break;
+
+            }
 
         if ($response->successful()) {
             $data = $response->json('data');
@@ -98,16 +172,76 @@ class FacebookSettings extends Component
                 [
                     'store_id' => $store->id,
                     'provider' => 'Facebook',
-                    'event_type' => 'main_pixel'
+                    'event_type' => $pixelType
                 ],
                 [
                     'script_uuid' => $data['uuid'],
                 ]
             );
 
-            $this->dispatch('notify', ['type' => 'success', 'message' => 'Facebook Pixel script injected successfully']);//TODO: display this on FE
+            session()->flash($pixelType . 'PixelSuccess', 'Facebook Pixel script injected successfully.');
+
         } else {
-            $this->dispatch('notify', ['type' => 'error', 'message' => 'Failed to inject Facebook Pixel script']);//TODO: display this on FE
+            session()->flash($pixelType . 'mainPixelFail', 'Failed to inject Facebook Pixel script.');
         }
+    }
+
+    private function deletePixel($pixelType){
+        $store = Store::where('id',session('store_id'))->first();
+        $script = StoreScript::where('store_id', $store->id)->where('provider', 'Facebook')->where('event_type', $pixelType)->first();
+
+        if (!$script) {
+            session()->flash($pixelType . 'PixelSuccess', 'Pixel script not found.');
+            return;
+        }
+
+        $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts/{$script->script_uuid}";
+
+        $response = Http::withHeaders([
+            'X-Auth-Token' => $store->access_token,
+            'Accept' => 'application/json',
+        ])->delete($url);
+
+        if ($response->successful()) {
+            $script->delete();
+            $this->scriptStatus['main'] = false;
+            session()->flash($pixelType . 'PixelSuccess', 'Pixel script deleted.');
+            return;
+        } else {
+            session()->flash($pixelType . 'PixelFail', 'Failed to delete script.');
+            return;
+        }
+    }
+
+    public function injectMainPixel(){
+        return $this->injectPixel("main");
+    }
+
+    public function injectViewContent(){
+        return $this->injectPixel("viewContent");
+    }
+
+    public function deleteMainPixel(){
+        return $this->deletePixel("main");
+    }
+
+    public function deleteViewContent(){
+        return $this->deletePixel("viewContent");
+    }
+
+    public function injectAddToCart(){
+        return $this->injectPixel("addToCart");
+    }
+
+    public function deleteAddToCart(){
+        return $this->deletePixel("addToCart");
+    }
+
+    public function injectPurchase(){
+        return $this->injectPixel("purchase");
+    }
+
+    public function deletePurchase(){
+        return $this->deletePixel("purchase");
     }
 }
