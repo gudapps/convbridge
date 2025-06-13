@@ -37,4 +37,9 @@ class TrackedOrder extends Model
     {
         return $this->hasMany(ConversionLog::class, 'order_id', 'order_id');
     }
+
+    public function additions()
+    {
+        return $this->hasOne(TrackedOrderAddition::class, 'order_id', 'order_id');
+    }
 }

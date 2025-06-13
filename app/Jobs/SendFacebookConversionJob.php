@@ -6,6 +6,7 @@ use App\Models\ConversionLog;
 use App\Models\ConversionSetting;
 use App\Models\Store;
 use App\Models\TrackedOrder;
+use App\Models\TrackedOrderAddition;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -23,6 +24,7 @@ class SendFacebookConversionJob implements ShouldQueue
     public function handle(): void
     {
         $trackedOrder = TrackedOrder::where('id', $this->trackedOrderId)->first();
+        $trackedOrderAdditions = $trackedOrder->additions ?? null;
 
         if(! $trackedOrder || ! $trackedOrder->customer){
             Log::warning("Order or customer not found for FB CAPI: store={$trackedOrder->store_id}, order={$trackedOrder->id}");
@@ -57,6 +59,34 @@ class SendFacebookConversionJob implements ShouldQueue
 
         $customer = $trackedOrder->customer;
 
+        // Creating user data array
+        $userData = [
+            'em' => [hash('sha256', strtolower($customer->email ?? ''))],
+            'ph' => [hash('sha256', preg_replace('/\D/', '', $customer->phone ?? ''))],
+            'fn' => [hash('sha256', strtolower($customer->first_name ?? ''))],
+            'ln' => [hash('sha256', strtolower($customer->last_name ?? ''))],
+            'zip' => [hash('sha256', $customer->zip ?? '')],
+            'ct' => [hash('sha256', strtolower($customer->city ?? ''))],
+            'st' => [hash('sha256', strtolower($customer->region ?? ''))],
+            'country' => [hash('sha256', strtolower($customer->country_code ?? ''))],
+            'client_ip_address' => $trackedOrder->order_data['ip_address'],
+            'external_id' => $trackedOrder->id,
+        ];
+
+        if($trackedOrderAdditions){
+            if (!empty($trackedOrderAdditions->fbp)) {
+                $userData['fbp'] = $trackedOrderAdditions->fbp;
+            }
+
+            if (!empty($trackedOrderAdditions->fbc)) {
+                $userData['fbc'] = $trackedOrderAdditions->fbc;
+            }
+
+            if (!empty($trackedOrderAdditions->user_agent)) {
+                $userData['client_user_agent'] = $trackedOrderAdditions->user_agent;
+            }
+        }
+
         $payload = [
             'data' => [[
                 'event_name' => 'Purchase',
@@ -64,18 +94,7 @@ class SendFacebookConversionJob implements ShouldQueue
                 'event_id' => 'order_' . $trackedOrder->order_id,
                 'action_source' => 'website',
                 'event_source_url' => $store->store_url . '/checkout/order-confirmation',
-                'user_data' => [
-                    'em' => [hash('sha256', strtolower($customer->email ?? ''))],
-                    'ph' => [hash('sha256', preg_replace('/\D/', '', $customer->phone ?? ''))],
-                    'fn' => [hash('sha256', strtolower($customer->first_name ?? ''))],
-                    'ln' => [hash('sha256', strtolower($customer->last_name ?? ''))],
-                    'zip' => [hash('sha256', $customer->zip ?? '')],
-                    'ct' => [hash('sha256', strtolower($customer->city ?? ''))],
-                    'st' => [hash('sha256', strtolower($customer->region ?? ''))],
-                    'country' => [hash('sha256', strtolower($customer->country_code ?? ''))],
-                    'client_ip_address' => $trackedOrder->order_data['ip_address'],
-                    'external_id' => $trackedOrder->id,
-                ],
+                'user_data' => $userData,
                 'custom_data' => [
                     'currency' => 'USD', // You may want to make this dynamic
                     'value' => $trackedOrder->order_data['total_inc_tax'] ?? 0,

@@ -18,7 +18,7 @@ class WebhookController extends Controller
         $storeHash = str_replace('stores/', '', $payload['producer']);
         $orderId = $payload['data']['id'];
 
-        FetchAndStoreOrderJob::dispatch($storeHash, $orderId);
+        FetchAndStoreOrderJob::dispatch($storeHash, $orderId)->delay(now()->addSeconds(15));
 
         // Respond with a 200 status code to acknowledge the webhook receipt
         return response()->json(['status' => 'success']);
@@ -33,7 +33,7 @@ class WebhookController extends Controller
         $storeHash = str_replace('stores/', '', $payload['producer']);
         $orderId = $payload['data']['id'];
 
-        FetchAndStoreOrderJob::dispatch($storeHash, $orderId);
+        FetchAndStoreOrderJob::dispatch($storeHash, $orderId)->delay(now()->addSeconds(15));
 
         // Respond with a 200 status code to acknowledge the webhook receipt
         return response()->json(['status' => 'success']);

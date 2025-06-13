@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\BigCommerce\AuthController;
 use App\Http\Controllers\BigCommerce\LoadController;
+use App\Http\Controllers\BigCommerce\TrackingController;
 use App\Http\Controllers\BigCommerce\WebhookController;
 use App\Livewire\BigCApp\BingSettings;
 use App\Livewire\BigCApp\Dashboard;
 use App\Livewire\BigCApp\FacebookSettings;
 use App\Livewire\BigCApp\GoogleSettings;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,6 +29,19 @@ Route::prefix('bigc-app')->group(function () {
     Route::post('/webhooks/order-created', [WebhookController::class, 'handleOrderCreated'])->name('bigc.webhook.order.created')->withoutMiddleware(VerifyCsrfToken::class);
     // Webhook route to handle the 'order.statusUpdated' event
     Route::post('/webhooks/order-statusUpdated', [WebhookController::class, 'handleOrderStatusUpdated'])->name('bigc.webhook.order.statusUpdated')->withoutMiddleware(VerifyCsrfToken::class);
+
+    // Custom tracking urls
+    Route::options('/track', function (Request $request) {
+        $origin = $request->header('Origin');
+
+        // You can apply validation logic here if needed.
+        return response('', 204)
+            ->header('Access-Control-Allow-Origin', $origin)
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    });
+    Route::post('/track', [TrackingController::class, 'handleOrderTracking'])->name('bigc.track.handleOrderTracking')->withoutMiddleware(VerifyCsrfToken::class);
+
 
     // Routes that require session validation
     Route::middleware(['bigc.auth', 'allowiframe'])->group(function () {
