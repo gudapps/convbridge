@@ -104,9 +104,12 @@ class FetchAndStoreOrderJob implements ShouldQueue
 
         // Save order items
         foreach ($products as $item) {
-            TrackedOrderItem::create([
+            TrackedOrderItem::updateOrCreate([
                 'tracked_order_id' => $trackedOrder->id,
                 'product_id' => $item['product_id'],
+            ],
+            [
+                'sku' => $item['sku'],
                 'name' => $item['name'],
                 'quantity' => $item['quantity'],
                 'price' => $item['price_inc_tax'],

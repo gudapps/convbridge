@@ -11,8 +11,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-    <div>
+    <div class="flex items-center justify-center">
         <img src="{{ asset('images/ConvBridge_Logo_100x88_wo_bg.png') }}" alt="Conversion Bridge Logo" class="h-16">
+        <h1 class="text-xl">Conversion Bridge</h1>
     </div>
     {{ $slot }}
 </body>

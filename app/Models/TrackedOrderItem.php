@@ -9,6 +9,7 @@ class TrackedOrderItem extends Model
     protected $fillable = [
         'tracked_order_id',
         'product_id',
+        'sku',
         'name',
         'quantity',
         'price',

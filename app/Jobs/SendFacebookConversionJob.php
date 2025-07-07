@@ -74,6 +74,10 @@ class SendFacebookConversionJob implements ShouldQueue
         ];
 
         if($trackedOrderAdditions){
+            if (!empty($trackedOrderAdditions->ip)) {
+                $userData['client_ip_address'] = $trackedOrderAdditions->ip;
+            }
+
             if (!empty($trackedOrderAdditions->fbp)) {
                 $userData['fbp'] = $trackedOrderAdditions->fbp;
             }
@@ -100,10 +104,10 @@ class SendFacebookConversionJob implements ShouldQueue
                     'value' => $trackedOrder->order_data['total_inc_tax'] ?? 0,
                     'order_id' => $trackedOrder->order_id,
                     'content_type' => 'product',
-                    'content_ids' => $trackedOrder->items->pluck('product_id')->toArray(),
+                    'content_ids' => $trackedOrder->items->pluck('sku')->toArray(),
                     'contents' => $trackedOrder->items->map(function ($item) {
                                         return [
-                                            'id'       => $item->product_id,
+                                            'id'       => $item->sku,
                                             'quantity' => $item->quantity,
                                             'item_price' => $item->price,
                                         ];

@@ -29,25 +29,28 @@ class FacebookSettings extends Component
         $this->pixel_id = $setting->settings['pixel_id'] ?? '';
         $this->access_token = $setting->settings['access_token'] ?? '';
 
-        $this->scriptStatus['main'] = StoreScript::where('store_id', $setting->store_id)
+        if($setting != null){
+            $this->scriptStatus['main'] = StoreScript::where('store_id', $setting->store_id)
                                         ->where('provider', 'Facebook')
                                         ->where('event_type', 'main')
                                         ->exists();
 
-        $this->scriptStatus['viewcontent'] = StoreScript::where('store_id', $setting->store_id)
+            $this->scriptStatus['viewcontent'] = StoreScript::where('store_id', $setting->store_id)
                                         ->where('provider', 'Facebook')
                                         ->where('event_type', 'viewContent')
                                         ->exists();
 
-        $this->scriptStatus['addtocart'] = StoreScript::where('store_id', $setting->store_id)
+            $this->scriptStatus['addtocart'] = StoreScript::where('store_id', $setting->store_id)
                                         ->where('provider', 'Facebook')
                                         ->where('event_type', 'addToCart')
                                         ->exists();
 
-        $this->scriptStatus['purchase'] = StoreScript::where('store_id', $setting->store_id)
+            $this->scriptStatus['purchase'] = StoreScript::where('store_id', $setting->store_id)
                                         ->where('provider', 'Facebook')
                                         ->where('event_type', 'purchase')
                                         ->exists();
+        }
+
     }
 
     public function save()
@@ -143,7 +146,7 @@ class FacebookSettings extends Component
                 break;
 
             case "purchase":
-                $scriptContent = "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{$this->pixel_id}');fbq('track','PageView');(function(){try{function getCookie(name){const match=document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)'));return match?match[2]:null;}setTimeout(function(){const orderId=document.querySelector('[data-test=\\\"order-confirmation-order-number-text\\\"] strong')?.innerText;const fbp=getCookie('_fbp');const fbc=getCookie('_fbc');const userAgent=navigator.userAgent;const pageUrl=window.location.href;if(orderId){fetch('https://convbridge.com/bigc-app/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:orderId,fbp:fbp,fbc:fbc,user_agent:userAgent,page_url:pageUrl})});}},2000);}catch(e){console.error('ConvBridge tracking failed',e);}})();</script>";
+                $scriptContent = "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{$this->pixel_id}');fbq('track','PageView');(function(){try{function getCookie(name){const match=document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)'));return match?match[2]:null;}setTimeout(function(){const orderId=document.querySelector('[data-test=\\\"order-confirmation-order-number-text\\\"] strong')?.innerText;const fbp=getCookie('_fbp');const fbc=getCookie('_fbc');const userAgent=navigator.userAgent;const pageUrl=window.location.href;if(orderId){fetch('https://convbridge.com/bigc-app/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store_id:" .$store->id . ",order_id:orderId,fbp:fbp,fbc:fbc,user_agent:userAgent,page_url:pageUrl})});}},2000);}catch(e){console.error('ConvBridge tracking failed',e);}})();</script>";
                 $url = "https://api.bigcommerce.com/stores/{$store->store_hash}/v3/content/scripts";
                 $response = Http::withHeaders([
                     'X-Auth-Token' => $store->access_token,
